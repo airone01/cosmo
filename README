@@ -1,0 +1,95 @@
+Cosmo
+=====
+
+Configurable Opinionated System for Modular Options (Cosmo) is an attempt at
+proving that it is possible to bridge NixOS's declarative systems with the
+end-user interactivity of other Linux distros and OSes.
+Cosmo is a work-in-progress proof of concept.
+
+Original Ideas and Views
+========================
+
+To read about what inspired this (and what this project is), read REPORT.
+
+Features Status
+===============
+
+This project is meant to be a proof-of-concept or minimal viable product (MVP).
+There are multiple aspects that should be implemented in order to prove it
+works from end to end in a complete environment.
+
+Necessary for PoC
+-----------------
+
+This proof of concept is a work-in-progress and will keep that status for as
+long as the following features have not been implemented.
+
+COSMO is conceptually divided into two layers: the engine (this repository) and
+the distro/UX (the future orchestrator and GUI).
+
+This repository implements the Engine MVP. Its scope is strictly limited to 
+the translation layer between standard JSON data and NixOS module evaluation.
+
+Engine MVP (scope of this repo)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* (DONE) Data bridge: A Nix flake architecture that cleanly ingests a static
+  JSON file to conditionally build a complete NixOS system.
+* (DONE) Schema extraction: A pure-Nix engine that safely evaluates the module
+  tree and exports a strict JSON Schema Draft 7 without infinite recursion.
+* (DONE) Locality of behavior: Module design where NixOS implementation and
+  JSON schema definition live in the exact same file.
+* (DONE) Overriding: Built-in support for standard Nix files (overrides.nix) to
+  cleanly bypass the JSON bridge for power users.
+* (TODO) Schema translation keys: Separating the schema strings (titles, 
+  descriptions) from the evaluation tree to support i18n localization.
+
+Distro vision (outside the scope of this repo)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following features are required for the complete COSMO system, but will
+be implemented in separate client/orchestrator repositories:
+
+* (TODO) Frontend client: A stateless GUI application that dynamically renders
+  its interface entirely from the extracted JSON schema, and writes user
+  selections back to cosmo.json. Basically a settings app.
+* (TODO) VCS integration: A daemon or script that automatically stages and
+  commits the JSON configuration to a local Git repository before each system
+  rebuild, ensuring rollback capability.
+* (TODO) The "magic file" architecture: A packaging mechanism that bundles the
+  declarative git repository (cosmo.json, flake.lock) alongside an imperative
+  snapshot of the user's state (~/.config, dconf dumps) into a single, portable
+  .cosmo archive.
+* (TODO) State migration hooks: A system to safely migrate or wipe imperative
+  user configuration files when the underlying declarative software is changed
+  (e.g., swapping PulseAudio for Pipewire).
+  This is not Home Manager. It would remove old configuration information that
+  is not relevant on newer versions. This feature is the closest we are to
+  falling into the AST trap like many similar projects before us.
+
+Necessary for Implementation
+----------------------------
+
+The following features are optional for a proof of concept but would be
+necessary for a fully-fledged implementation.
+
+* A complete formatter and linter set using treefmt and git hooks
+* A CI, on the simpler side of what CI/CD can offer. We are not evaluating
+  100k+ packages like in nixpkgs, so a complete system like OfBorg would be
+  overkill, but something like GitHub Actions checking the flake would come a
+  long way.
+* End-to-end testing, the Nix way with 'checks'. This is basically necessary.
+* Generous binary caching. One could imagine caching most of the default
+  settings, as users would not usually do crazy edits like the Nix community
+  does, except power users, which are already used to building on their PCs.
+* Bulletproof file structure, to avoid having to move files later
+* First-class rules and contribution guidelines (like NixOS's RFCs)
+* First-class commits and PRs conventions that are understandable by machines
+  and scripts (like NixOS's RFCs).
+* First-class documentation. I'm not talking about setting up an auto Nix docs
+  website and calling it a day, I'm talking real documentation understandable
+  by humans.
+* A website with features exposed for end users to refer to.
+* Translations support for schema. Ideally separating the schema from the
+  translation keys and serving them separately
+

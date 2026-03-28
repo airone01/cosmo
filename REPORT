@@ -1,0 +1,113 @@
+This file was AI-generated after a long conversation with an LLM.
+The idea is from a human, this report is from an AI.
+
+===================================================================
+Architecture Report: Cosmo
+===================================================================
+:Subtitle: Configurable Opinionated System for Modular Options
+:Status: Draft Architecture
+:Date: 2026-03-28
+
+Executive Summary
+-----------------
+The Nix ecosystem suffers from a severe UX cliff: to achieve a perfectly
+reproducible, declarative operating system, users are currently forced to learn
+a functional programming language. Previous attempts to solve this by building
+GUIs that directly parse and edit ``.nix`` abstract syntax trees have
+consistently failed due to language complexity.
+
+**Cosmo** proposes a robust alternative: a strict "Data Bridge" architecture
+that physically separates a consumer-friendly, imperative GUI Settings App from
+the declarative Nix backend. By utilizing JSON Schemas, state snapshots, and
+embedded Git version control, Cosmo achieves an Apple-like user experience (easy
+backups, transparent rollbacks, shareable configurations) without compromising
+the immutable core of NixOS.
+
+Core Architecture: The JSON Data Bridge
+---------------------------------------
+The foundation of Cosmo relies on preventing the GUI from ever reading or
+writing Nix code.
+
+* **Schema Generation:** The Nix backend utilizes a custom wrapper to define OS
+  configurations. When the Settings App launches, it extracts a standard JSON
+  Schema Draft 7 directly from the Flake via Nix evaluation.
+* **Dynamic UI:** The GUI dynamically renders its toggles, dropdowns, and tabs
+  strictly based on this JSON Schema, utilizing conditional logic (``allOf``,
+  ``if/then``) to handle dependent options safely.
+* **State Output:** Upon applying changes, the GUI writes the user's choices to
+  a static file: ``cosmo.json``.
+* **System Build:** The GUI triggers the system rebuild. The Nix Flake reads
+  ``cosmo.json`` via ``builtins.fromJSON`` and uses a dendritic module pattern
+  to map simple boolean/string values into complex NixOS option clusters.
+
+Version Control & Rollbacks (Git Integration)
+---------------------------------------------
+To provide robust configuration rollback support, the declarative system
+configuration (``/etc/cosmo``) is initialized as a local Git repository.
+
+* **Auto-Commits:** Before the GUI executes a system rebuild, it automatically
+  stages and commits changes to ``cosmo.json``, ``flake.lock``, and
+  ``overrides.nix``.
+* **Configuration Rollbacks:** If a user makes a mistake in the GUI that results
+  in an undesirable system state, they can use the Settings App to revert to a
+  previous Git commit, restoring the exact JSON configuration they had
+  yesterday, independent of NixOS's bootloader generations.
+* **Exclusion of State:** The imperative user state is strictly
+  ``.gitignore``'d to prevent repository bloat and keep the Git history focused
+  purely on declarative infrastructure.
+
+The "In-Between" Paradigm: Handling User State
+----------------------------------------------
+Standard declarative setups render in-app settings menus (e.g., inside VLC or
+Obsidian) read-only. Cosmo solves this via a hybrid approach:
+
+* **Declarative Infrastructure:** The OS environment, desktop environment,
+  system services, and package installations are defined strictly by Nix via
+  ``cosmo.json``.
+* **Imperative User Space:** Application configurations (dotfiles in
+  ``~/.config``, ``dconf`` databases) remain mutable by the user through normal
+  application usage.
+
+The "Magic File" Concept (``.cosmo`` Archive)
+---------------------------------------------
+To provide a seamless, shareable system state, Cosmo packages the system into a
+compressed archive (e.g., ``my-backup.cosmo``, essentially a ``.tar.zst``).
+
+This archive bundles two distinct layers:
+
+1. **The Git Repository:** The entire ``.git`` folder, ``cosmo.json``, and
+  ``flake.lock``, preserving the declarative state and its complete version
+  history.
+2. **The State Directory:** An imperative snapshot of the user's dotfiles and
+  necessary config hooks (like a ``dconf.ini`` dump).
+
+When restored, Cosmo rebuilds the exact NixOS base from the Git repository's
+HEAD, and a lightweight daemon injects the user state back into the home folder.
+
+Extensibility: The Plugin System
+--------------------------------
+To prevent the core Cosmo repository from bloating, the system utilizes Nix
+Flake inputs for third-party expansion.
+
+* **Adding Plugins:** Users paste a Flake URL into the GUI, which is saved to a
+  ``"plugins"`` array in ``cosmo.json``.
+* **Two-Stage Evaluation:** The GUI performs a background evaluation that merges
+  the core Cosmo schema with the downloaded plugin's schema using Nix's
+  ``lib.mkMerge``.
+* **Seamless Integration:** The GUI dynamically updates to display the new
+  plugin's options. Because the URL is saved in the JSON, it remains perfectly
+  portable inside the magic file.
+
+The Escape Hatch: Power User Overrides
+--------------------------------------
+To ensure Cosmo remains viable for DevOps engineers and power users, the system
+includes a deliberate bypass mechanism.
+
+* **Lower Priority Defaults:** Every NixOS option translated from
+  ``cosmo.json`` by the Cosmo backend is strictly wrapped in ``lib.mkDefault``.
+* **``overrides.nix``:** Users can create an ``overrides.nix`` file adjacent to
+  ``cosmo.json`` to write raw, standard Nix code.
+* **Conflict Resolution:** Because of the priority system, ``overrides.nix``
+  cleanly overwrites GUI selections or adds custom kernel/networking patches
+  without throwing evaluation errors. This file is tracked by the embedded Git
+  repository and bundled into system backups.

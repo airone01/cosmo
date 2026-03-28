@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "system": {
+    "timezone": "UTC"
+  },
+  "desktop": {
+    "gnome": true
+  }
+}
